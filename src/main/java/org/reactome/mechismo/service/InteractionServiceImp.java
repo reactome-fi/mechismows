@@ -80,6 +80,12 @@ public class InteractionServiceImp implements InteractionService {
     
     @Transactional
     @Override
+    public <T> void delete(T obj) {
+        interactionDAO.delete(obj);
+    }
+    
+    @Transactional
+    @Override
     public <T> void save(T obj) {
         interactionDAO.save(obj);
     }

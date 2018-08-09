@@ -30,6 +30,12 @@ public class InteractionDAOImp implements InteractionDAO {
         session.update(obj);
     }
     
+    @Override
+    public <T> void delete(T obj) {
+        Session session = sessionFactory.getCurrentSession();
+        session.delete(obj);
+    }
+    
     @Override 
     public <T> void save(T obj) {
         Session session = sessionFactory.getCurrentSession();

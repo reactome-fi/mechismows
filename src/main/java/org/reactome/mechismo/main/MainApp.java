@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.junit.Test;
 import org.reactome.mechismo.config.AppConfig;
+import org.reactome.mechismo.model.AnalysisResult;
 import org.reactome.mechismo.model.Entity;
 import org.reactome.mechismo.model.Interaction;
 import org.reactome.mechismo.model.Reaction;
@@ -18,12 +19,21 @@ import org.reactome.mechismo.service.ReactionService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 /**
- * Use this class for generating the database.
+ * Use this class for generating the database according to the following methods running:
+ * 0). If the database is empty, make sure hibernate.hbm2ddl.auto=create in db.properties in the resource folder
+ * and run main() after commenting out loadInteractions() statement.
+ * 1). main() by passing the file name for mechismo input (make sure hibernate.hbm2ddl.auto=none in db.properties)
+ * 2). checkEntities() to fix some entity names
+ * 3). updateInteractionName() to fix some interaction names
+ * 4). loadInteractionAnalysisResults() to load analysis results for interactions
+ * 5). loadReactionAnalysisResults() for load reaction analysis results.
+ * 6). If the last two steps are needed to be reloaded, run deleteAnalysisResults() first after updating the LazyType to EAGER.
  * @author wug
  *
  */
 public class MainApp {
     private static final Logger logger = Logger.getLogger(MainApp.class.getName());
+    private static final String RESULT_DIR = "/Users/wug/datasets/Mechismo/FrancescoResults/080918/";
     
     /**
      * Run this method to load all interactions into the database.
@@ -120,6 +130,12 @@ public class MainApp {
         context.close();
     }
     
+    /**
+     * To make the following method work, change the following setting in Reaction class:
+     * @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY): LAZY should be EAGER.
+     * private Set<AnalysisResult> analysisResults;
+     * @throws Exception
+     */
     @Test
     public void loadReactionAnalysisResults() throws Exception {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
@@ -137,10 +153,41 @@ public class MainApp {
         context.close();
     }
     
+    /**
+     * Delete the loaded analysis results for re-loading without re-generating the database.
+     * Make sure FetcthType is EAGER in both Reaction and Interaction.
+     * @throws Exception
+     */
+    @Test
+    public void deleteAnalysisResults() throws Exception {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+        InteractionService interactionService = context.getBean(InteractionService.class);
+        List<Interaction> interactions = interactionService.list(Interaction.class);
+        logger.info("Total interactions: " + interactions.size());
+        for (Interaction i : interactions) {
+            if (i.getAnalysisResults() == null || i.getAnalysisResults().size() == 0)
+                continue;
+            i.setAnalysisResults(null); // reset the analysis results
+            interactionService.update(i);
+        }
+        List<Reaction> reactions = interactionService.list(Reaction.class);
+        logger.info("Total reactions: " + reactions.size());
+        for (Reaction reaction : reactions) {
+            interactionService.delete(reaction); // Delete the reaction directly so that it can be reloaded again.
+        }
+        List<AnalysisResult> results = interactionService.list(AnalysisResult.class);
+        logger.info("Total AnalysisResult: " + results.size());
+        for (AnalysisResult result : results)
+            interactionService.delete(result);
+        context.close();
+    }
+    
     private Collection<Reaction> getReactionsToBeLoaded(InteractionService service) throws Exception {
-        String dir = "datasets/Mechismo/FrancescoResults/041018/";
-        String cancerWiseResult = dir + "tcga_mechismo_stat_cancer_wise_reactions.tsv";
-        String pancancerResult = dir + "tcga_mechismo_stat_pancancer_reactions.tsv";
+//        String dir = "datasets/Mechismo/FrancescoResults/041018/";
+        // Updated results
+//        String dir = "datasets/Mechismo/FrancescoResults/051118/";
+        String cancerWiseResult = RESULT_DIR + "tcga_mechismo_stat_cancer_wise_reactions.tsv";
+        String pancancerResult = RESULT_DIR + "tcga_mechismo_stat_pancancer_reactions.tsv";
         MechismoReactionResultLoader loader = new MechismoReactionResultLoader();
         loader.setInteractionService(service);
         loader.parseResults(cancerWiseResult, false);
@@ -167,9 +214,13 @@ public class MainApp {
     }
     
     private Collection<Interaction> getInteractionsToBeUpdated(InteractionService service) throws Exception {
-        String dir = "datasets/Mechismo/FrancescoResults/041018/";
-        String cancerWiseResult = dir + "tcga_mechismo_stat_cancer_wise.tsv";
-        String pancancerResult = dir + "tcga_mechismo_stat_pancancer.tsv";
+//        String dir = "datasets/Mechismo/FrancescoResults/041018/";
+//        String cancerWiseResult = dir + "tcga_mechismo_stat_cancer_wise.tsv";
+//        String pancancerResult = dir + "tcga_mechismo_stat_pancancer.tsv";
+        // Results updated on May 18, 2018 without considering directions.
+//        String dir = "datasets/Mechismo/FrancescoResults/051118/";
+        String cancerWiseResult = RESULT_DIR + "tcga_mechismo_stat_cancer_wise_undirected.tsv";
+        String pancancerResult = RESULT_DIR + "tcga_mechismo_stat_pancancer_undirected.tsv";
         InteractionResultLoader loader = new InteractionResultLoader();
         loader.setInteractionService(service);
         loader.parseResults(cancerWiseResult, false);

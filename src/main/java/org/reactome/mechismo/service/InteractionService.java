@@ -16,6 +16,8 @@ public interface InteractionService {
     
     public <T> void update(T obj);
     
+    public <T> void delete(T obj);
+    
     public <T> void save(T obj);
     
     public Interaction queryInteraction(String name);

@@ -14,6 +14,8 @@ public interface InteractionDAO {
     
     public <T> void update(T obj);
     
+    public <T> void delete(T obj);
+    
     public <T> void save(T obj);
      
     public CancerType loadCancerType(String abbreviation);
