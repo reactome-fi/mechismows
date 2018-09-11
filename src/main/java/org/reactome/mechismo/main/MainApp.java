@@ -57,7 +57,22 @@ public class MainApp {
         context.close();
      }
     
-    /**
+    @Test
+    public void queryAnalysisResults() throws Exception {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+        InteractionService interactionService = context.getBean(InteractionService.class);
+//        String fi = "NRAS\tSOS1";
+        String fi = "BRAF\tMAP2K1";
+        Interaction interaction = interactionService.queryInteraction(fi);
+        System.out.println("Interaction: " + interaction.getName());
+        Set<AnalysisResult> results = interaction.getAnalysisResults();
+        results.forEach(result -> {
+            System.out.println(result.getCancerType().getAbbreviation() + "\t" + result.getPvalue() + "\t" + result.getFdr());
+        });
+        context.close();
+    }
+    
+   /**
      * Remove interaction names having {ECO:. This needs to be run after loading all interactions
      * via main().
      * Note: ECO is for Evidence Ontology.

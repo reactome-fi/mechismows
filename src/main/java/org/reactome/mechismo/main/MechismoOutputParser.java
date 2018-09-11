@@ -7,8 +7,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.Test;
@@ -144,22 +142,18 @@ public class MechismoOutputParser {
     }
     
     private Set<Sample> parseSamples(String input) {
+        String[] tokens = input.split("( )+");
+        String sampleToken = tokens[tokens.length - 1];
+        tokens = sampleToken.split(";");
         Set<Sample> samples = new HashSet<>();
-        // Input should be something like this:
-        // Q8IV61/K73N 1 Q8IV61/K73N  RASGRP3 ENST00000403687.3
-        // RASGRP3_ENST00000402538.3_Missense_Mutation_p.K73N|RASGRP3_ENST00000407811.1_Missense_Mutation_p.K73N
-        // GRP3_HUMAN READ:TCGA-AG-A002-01;COADREAD:TCGA-AG-A002-01;
-        // The following pattern tries to get both cancer type and sample id
-        String regExp = "([A-Z]+):(TCGA-[0-9A-Z-]+)";
-        Pattern pattern = Pattern.compile(regExp);
-        Matcher matcher = pattern.matcher(input);
-        int start = 0;
-        while (matcher.find(start)) {
-            String cancerType = matcher.group(1);
-            String sampleId = matcher.group(2);
-            Sample sample = getSample(cancerType, sampleId);
-            samples.add(sample);
-            start = matcher.end();
+        for (String token : tokens) {
+            String[] tokens1 = token.split("(,|:)");
+            String cancerType = tokens1[0];
+            for (int i = 1; i < tokens1.length; i++) {
+                String sampleId = tokens1[i];
+                Sample sample = getSample(cancerType, sampleId);
+                samples.add(sample);
+            }
         }
         return samples;
     }
@@ -189,15 +183,20 @@ public class MechismoOutputParser {
     }
     
     @Test
-    public void testParseSamples() {
+    public void testParseSamples() throws IOException {
         reset();
-        String text = "Q8IV61/K73N 1 Q8IV61/K73N  "
-                + "RASGRP3 ENST00000403687.3 RASGRP3_ENST00000402538.3_Missense_Mutation_"
-                + "p.K73N|RASGRP3_ENST00000407811.1_Missense_Mutation_p.K73N GRP3_HUMAN READ:"
-                + "TCGA-AG-A002-01;COADREAD:TCGA-AG-A002-01;";
-        Set<Sample> samples = parseSamples(text);
-        System.out.println("Total samples: " + samples.size());
-        samples.forEach(sample -> System.out.println(sample));
+        //        String text = "Q8IV61/K73N 1 Q8IV61/K73N  "
+        //                + "RASGRP3 ENST00000403687.3 RASGRP3_ENST00000402538.3_Missense_Mutation_"
+        //                + "p.K73N|RASGRP3_ENST00000407811.1_Missense_Mutation_p.K73N GRP3_HUMAN READ:"
+        //                + "TCGA-AG-A002-01;COADREAD:TCGA-AG-A002-01;";
+        String file = "/Users/wug/datasets/Mechismo/TCGA/073018/BRAF_MAP2K1_TCGA_mech_output.tsv";
+        Files.lines(Paths.get(file)).forEach(line -> {
+            String[] tokens = line.split("\t");
+            System.out.println(tokens[6]);
+            Set<Sample> samples = parseSamples(tokens[6]);
+            System.out.println("Total samples: " + samples.size());
+            samples.forEach(sample -> System.out.println(sample));
+        });
     }
     
     private Interaction getFIForLine(String[] tokens) {
